@@ -1,27 +1,56 @@
 "use client"
-
-import Image from "next/image";
-import EnergyInput from "./components/EnergyInput";
+import './globals.css';
 import { useState } from "react";
-import OffersList from "./components/OfferList";
 import { cooperatives } from "./data/Cooperatives";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertCircle, CheckCircle, DollarSign, MapPin, Users, Zap } from "lucide-react";
+import { AlertCircle, CheckCircle, MapPin, Users, Zap } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
+
+
 export default function Home() {
   const [value, setValue] = useState<number | null>(null)
+  const [userType, setUserType] = useState<"pf" | "pj">("pf");
+  const [monthlyBill, setMonthlyBill] = useState<string>("");
+  const [showResults, setShowResults] = useState(false);
 
-  const filteredOffers = value
-    ? cooperatives.filter(
-        (coop) =>
-          value >= coop.valorMinimoMensal && value <= coop.valorMaximoMensal
+  const handleBillChange = (value: string) => {
+    setMonthlyBill(value);
+    const parsedValue = parseFloat(value.replace(",", "."));
+    if (!isNaN(parsedValue)){
+      setValue(parsedValue);
+    } else {
+      setValue(null);
+    }
+  }
+
+  const handleSearch = () => {
+    setShowResults(true);
+  };
+
+  const formatCurrency = (value: number) => {
+    return value.toLocaleString("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    });
+  };
+
+  const eligibleCooperatives = value
+  ? cooperatives
+      .filter(
+        (coop) => value >= coop.minMonthlyValue && value <= coop.maxMonthlyValue
       )
-    : []
+      .filter((coop) => coop.types.includes(userType))
+      .map((coop) => ({
+        ...coop,
+        estimatedSavings: value * coop.savingsPercent
+      }))
+  : [];
+ 
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50">
@@ -30,10 +59,10 @@ export default function Home() {
         <div className="text-center mb-12">
           <div className="flex items-center justify-center mb-4">
             <Zap className="h-12 w-12 text-green-600 mr-3" />
-            <h1 className="text-4xl font-bold text-gray-900">Energia Cooperativa</h1>
+            <h1 className="text-4xl font-bold text-gray-900">Coop Energy</h1>
           </div>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Encontre a cooperativa de energia ideal para seu perfil e economize na sua conta de luz
+            Encontre a cooperativa de energia ideal e economize na sua conta de luz
           </p>
         </div>
 
@@ -70,11 +99,10 @@ export default function Home() {
                 Valor da Conta Mensal (R$)
               </Label>
               <div className="relative">
-                <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                 <Input
                   id="monthly-bill"
                   type="text"
-                  placeholder="Ex: 350,00"
+                  placeholder="Ex: R$ 350,00"
                   value={monthlyBill}
                   onChange={(e) => handleBillChange(e.target.value)}
                   className="pl-10 text-lg"
@@ -125,6 +153,7 @@ export default function Home() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {eligibleCooperatives.map((coop) => (
+                  
                   <Card key={coop.id} className="hover:shadow-lg transition-shadow">
                     <CardHeader>
                       <div className="flex items-start justify-between">
@@ -135,7 +164,7 @@ export default function Home() {
                             {coop.location}
                           </div>
                         </div>
-                        <Badge className="bg-green-100 text-green-800">{coop.savings} economia</Badge>
+                        <Badge className="bg-green-100 text-green-800">{formatCurrency(coop.estimatedSavings)} economia</Badge>
                       </div>
                       <CardDescription className="text-base">{coop.description}</CardDescription>
                     </CardHeader>
